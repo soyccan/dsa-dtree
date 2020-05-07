@@ -1,0 +1,20 @@
+CC=g++
+FNAME=wine.train
+PNAME=wine.test
+EPS=0
+RM=rm -rf
+
+.PHONY: clean run_tree predict_tree
+
+tree_pred_func.cpp: tree $(FNAME)
+	./tree $(FNAME) $(EPS) > tree\_pred\_func.cpp
+
+clean:
+	$(RM) tree_pred_func.cpp
+
+run_tree: clean_tree_pred tree_pred.h
+
+predict_tree: tree_predictor.cpp tree_pred_func.cpp $(PNAME)
+	$(CC) ./tree_predictor.cpp -o ./tree_predictor
+	./tree_predictor $(PNAME) > ./tree_prediction.txt
+
