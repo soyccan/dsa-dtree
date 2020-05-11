@@ -55,6 +55,6 @@ int main(int argc, char** argv)
         }
     }
     dtree.build();
-    dtree.gen_code("/dev/stdout");
+    dtree.gen_code(std::cout);
     return 0;
 }

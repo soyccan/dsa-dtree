@@ -230,9 +230,8 @@ void DecisionTree::build()
     delete[] indices;
 }
 
-template <typename T>
 void DecisionTree::__travel_branch(Node* node,
-                                   std::basic_ostream<T>& content) const
+                                   std::basic_ostream<char>& content) const
 {
     if (!node->lch && !node->rch) {
         content << "return " << node->prediction << ";";
@@ -247,14 +246,19 @@ void DecisionTree::__travel_branch(Node* node,
     content << "}";
 }
 
+void DecisionTree::gen_code(std::basic_ostream<char>& dest) const
+{
+    dest << "int tree_predict(double* attr) {";
+    __travel_branch(__root, dest);
+    dest << "}";
+}
+
 void DecisionTree::gen_code(const std::string& filename) const
 {
     std::stringstream content;
-    content << "int tree_predict(double* attr) {";
-    __travel_branch(__root, content);
-    content << "}";
+    gen_code(content);
 
     std::ofstream fs(filename);
     fs.exceptions(std::ios::failbit);  // throw error if there is
-    fs.write(content.str().c_str(), content.str().size());
+    fs << content.rdbuf();
 }

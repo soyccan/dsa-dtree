@@ -26,6 +26,7 @@ public:
     void set_value(int sample, int property, double value);
 
     void build();
+    void gen_code(std::basic_ostream<char>& dest) const;
     void gen_code(const std::string& filename) const;
 
     const Node* root() const;
@@ -42,8 +43,7 @@ private:
 
     void __build(Node*& node, int indices[], int num_indices);
 
-    template <typename T>
-    void __travel_branch(Node* node, std::basic_ostream<T>& content) const;
+    void __travel_branch(Node* node, std::basic_ostream<char>& content) const;
 
 
     int __num_sample, __dimension;
