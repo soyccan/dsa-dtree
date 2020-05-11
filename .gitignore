@@ -1,0 +1,15 @@
+*.d
+*.json
+*.o
+
+tree
+predictor
+a.out
+
+*.dSYM
+
+.DS_Store
+.lldbinit
+.clangd
+
+tmp/

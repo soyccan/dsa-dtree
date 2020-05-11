@@ -3,18 +3,18 @@ FNAME=wine.train
 PNAME=wine.test
 EPS=0
 RM=rm -rf
+TARGET=tree_pred_func.cpp
 
 .PHONY: clean run_tree predict_tree
 
-tree_pred_func.cpp: tree $(FNAME)
-	./tree $(FNAME) $(EPS) > tree_pred_func.cpp
+ $(TARGET): tree $(FNAME)
+	./tree $(FNAME) $(EPS) > $(TARGET)
 
 clean:
-	$(RM) tree_pred_func.cpp
+	$(RM) $(TARGET)
 
-run_tree: clean_tree_pred tree_pred.h
+run_tree: clean $(TARGET)
 
-predict_tree: tree_predictor.cpp tree_pred_func.cpp $(PNAME)
+predict_tree: tree_predictor.cpp $(TARGET) $(PNAME)
 	$(CC) ./tree_predictor.cpp -o ./tree_predictor
 	./tree_predictor $(PNAME) > ./tree_prediction.txt
-	
