@@ -1,12 +1,13 @@
 CXX := clang++
-CXXFLAGS := -Wall -Wextra -Wconversion -std=gnu++17 -I/usr/local/include
+CXXFLAGS := -Wall -Wextra -std=gnu++17 -I/usr/local/include
 LDFLAGS :=
 
 EXES := tree predictor
-OBJS := main.o dtree.o tree_predictor.o tree_predict_func.o
-tmpfiles := tree_predict_func.cpp
+OBJS := main.o dtree.o tree_predictor.o tree_pred_func.o
+tmpfiles := tree_pred_func.cpp
 deps := $(OBJS:%.o=.%.o.d)
-compdb := $(OBJS:%.o=.%.o.json) compile_commands.json # compilation database
+compdb-dep := $(OBJS:%.o=.%.o.json) # compilation database
+compdb := compile_commands.json
 
 
 ifndef DEBUG
@@ -19,31 +20,34 @@ else
 endif
 
 
-.PHONY: all clean run upload tree_predict_func.cpp
-all: run compile_commands.json
+.PHONY: all clean run upload tree_pred_func.cpp
+all: run $(compdb)
 
-compile_commands.json:
-	sed -e '1s/^/[/' -e '$$s/,$$/]/' $(compdb) > compile_commands.json
+$(compdb): $(compdb-dep)
+	sed -e '1s/^/[/' -e '$$s/,$$/]/' $^ > $@
 
 run: predictor
 	./predictor data/wine.test
 
-predictor: tree_predictor.o tree_predict_func.o
+predictor: tree_predictor.o tree_pred_func.o
 	$(CXX) $(LDFLAGS) -o $@ $^
 
 tree: main.o dtree.o
 	$(CXX) $(LDFLAGS) -o $@ $^
 
-tree_predict_func.cpp: tree
-	./tree data/wine.train 0 > tree_predict_func.cpp
+tree_pred_func.cpp: tree
+	./tree data/wine.train 0 > $@
 
 $(OBJS): %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ -MMD -MF .$@.d -MJ .$@.json $<
+
+scan-build:
+	PATH=/usr/local/opt/llvm/bin:$(PATH) scan-build make
 
 upload:
 	scp -P 9453 -r *.hpp *.h *.cpp Makefile soyccan@bravo.nctu.me:/home/soyccan/Documents/dsa-hw4/
 
 clean:
-	rm -rf $(OBJS) $(deps) $(compdb) $(EXES) $(tmpfiles)
+	rm -rf $(EXES) $(OBJS) $(deps) $(compdb) $(compdb-dep) $(tmpfiles)
 
 -include $(deps)

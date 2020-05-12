@@ -6,6 +6,8 @@ tree
 predictor
 a.out
 
+tree_pred_func.cpp
+
 *.dSYM
 
 .DS_Store

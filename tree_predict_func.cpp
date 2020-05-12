@@ -1,1 +1,0 @@
-int tree_predict(double* attr) {if (attr[1-1] <= 12.77) {return -1;} else {if (attr[13-1] <= 630) {return -1;} else {if (attr[2-1] <= 0.94) {return -1;} else {return 1;}}}}

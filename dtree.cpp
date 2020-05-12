@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
+#include <ctime>
 #include <fstream>
 #include <functional>
 #include <limits>
@@ -32,10 +34,8 @@ Node::~Node()
 }
 
 
-DecisionTree::DecisionTree() : __num_sample(0), __dimension(0), __epsilon(0) {}
-
 DecisionTree::DecisionTree(double epsilon)
-    : __num_sample(0), __dimension(0), __epsilon(epsilon)
+    : __num_sample(0), __dimension(0), __epsilon(epsilon), __root(NULL)
 {
 }
 
@@ -45,15 +45,46 @@ DecisionTree::~DecisionTree()
         delete __root;
 }
 
-const Node* DecisionTree::root() const
+void DecisionTree::parseLIBSVM(std::basic_istream<char>& src)
 {
-    return __root;
+    /* in LIBSVM format */
+
+    std::string line, word;
+    std::istringstream liness;
+    std::vector<std::vector<std::pair<int, double>>> tmp;
+    int dimension = 0, num_sample = 0;
+
+    for (num_sample = 0; std::getline(src, line); num_sample++) {
+#ifndef NDEBUG
+        // throw internal error to foreground
+        liness.exceptions(std::ios::failbit);
+#endif
+        liness.str(line);
+        tmp.emplace_back();
+        liness >> word;
+        tmp.back().emplace_back(std::stoi(word), 0);
+        while (liness >> word) {
+            auto pos = word.find(':');
+            int j = std::stoi(word.substr(0, pos));
+            double val = std::stod(word.substr(pos + 1));
+            dimension = std::max(dimension, j);
+            tmp.back().emplace_back(j, val);
+        }
+        liness.clear();
+    }
+    reset(num_sample, dimension);
+    FOR (size_t, i, 0, tmp.size()) {
+        __res[i] = tmp[i][0].first;
+        FOR (size_t, j, 1, tmp[i].size()) {
+            __data[__dimension * i + (tmp[i][j].first - 1)] =
+                __data_t[__num_sample * (tmp[i][j].first - 1) + i] =
+                    tmp[i][j].second;
+        }
+    }
 }
 
 void DecisionTree::reset(int num_sample, int dimension)
 {
-    // LOG("reset n=%d d=%d", % num_sample % dimension);
-
     __num_sample = num_sample;
     __dimension = dimension;
 
@@ -72,20 +103,16 @@ void DecisionTree::reset(int num_sample, int dimension)
     if (__root)
         delete __root;
     __root = NULL;
-    // __root = new Node();
 
-    // __tree = std::make_unique<double[]>(num_sample * num_sample);
+    std::srand(std::time(NULL));
 
     // TODO: 0-init necessary?
     // fill(__data, __data + num_sample * dimension, 0);
     // fill(__data_t, __data_t + num_sample * dimension, 0);
-    // fill(__tree, __tree + num_sample * num_sample, 0);
 }
 
 void DecisionTree::set_result(int sample, int result)
 {
-    // LOG("set_result sample=%d result=%d", % sample % result);
-
     assert(0 <= sample - 1 && sample - 1 < __num_sample);
 
     __res[sample - 1] = result;
@@ -93,9 +120,6 @@ void DecisionTree::set_result(int sample, int result)
 
 void DecisionTree::set_value(int sample, int property, double value)
 {
-    // LOG("set_value sample=%d property=%d value=%lf",
-    //     % sample % property % value);
-
     assert(0 <= sample - 1 && sample - 1 < __num_sample);
     assert(0 <= property - 1 && property - 1 < __dimension);
 
@@ -114,16 +138,19 @@ inline void DecisionTree::__det_threshold(const int indices[],
 {
     /* determine optimal threshold by minimizing total confusion */
 
-    // optimal threshold and to what property it's related
-    double opt_thr = NAN;
-    int opt_prop = -1;
-
-    // confusion
-    int opt_lconf = -1, opt_rconf = -1;
+    // total confusion = sum of confusion of left and right
     int min_conf = std::numeric_limits<int>::max();
 
-    // tendency, will be reference of prediction making
-    int opt_ltend = -1, opt_rtend = -1;
+    // optimal queue, group (threshold, property) pairs of the same total
+    // confusion, and randomly choose one to be used
+    // thr/prop: threshold and about which property
+    // l/rconf: confusion
+    // l/rtend: tendency, will be reference of prediction making
+    struct __opt_t {
+        double thr;
+        int prop, lconf, rconf, ltend, rtend;
+    };
+    std::vector<__opt_t> opt;
 
     // (val, res, idx)
     auto tmp = std::make_unique<std::tuple<double, int, int>[]>(__num_sample);
@@ -156,25 +183,29 @@ inline void DecisionTree::__det_threshold(const int indices[],
 
             int lconf = std::min(ly, ln);
             int rconf = std::min(ry, rn);
-            if (lconf + rconf < min_conf) {
-                min_conf = lconf + rconf;
-                opt_thr = val;
-                opt_prop = prop;
-                opt_lconf = lconf;
-                opt_rconf = rconf;
-                opt_ltend = ly > ln ? 1 : -1;
-                opt_rtend = ry > rn ? 1 : -1;
+            if (lconf + rconf <= min_conf) {
+                if (lconf + rconf < min_conf) {
+                    min_conf = lconf + rconf;
+                    opt.clear();
+                }
+                opt.push_back({.thr = val,
+                               .prop = prop,
+                               .lconf = lconf,
+                               .rconf = rconf,
+                               .ltend = (ly >= ln ? 1 : -1),
+                               .rtend = (ry >= rn ? 1 : -1)});
             }
             // LOG("prop=%s i=%s conf=%s val=%s res=%s idx=%s",
             //     % prop % i % conf % val % res % idx);
         }
     }
-    threshold = opt_thr;
-    property = opt_prop;
-    l_confusion = opt_lconf;
-    r_confusion = opt_rconf;
-    l_tendency = opt_ltend;
-    r_tendency = opt_rtend;
+    const __opt_t& g = opt[std::rand() % opt.size()];
+    threshold = g.thr;
+    property = g.prop;
+    l_confusion = g.lconf;
+    r_confusion = g.rconf;
+    l_tendency = g.ltend;
+    r_tendency = g.rtend;
     LOG("threshold=%s prop=%s lconf=%s rconf=%s ltend=%s rtend=%s",
         % threshold % property % l_confusion % r_confusion % l_tendency %
             r_tendency);
@@ -233,6 +264,10 @@ void DecisionTree::build()
 void DecisionTree::__travel_branch(Node* node,
                                    std::basic_ostream<char>& content) const
 {
+    assert(node);
+    if (!node)
+        return;
+
     if (!node->lch && !node->rch) {
         content << "return " << node->prediction << ";";
         return;
