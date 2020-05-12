@@ -10,8 +10,9 @@ compdb := compile_commands.json
 
 tree_pred_func := tree_pred_func.cpp
 
-DTRAIN := data/wine.train
-DTEST := data/wine.test
+DTRAIN := data/cwb_train
+DTEST := data/cwb_train
+EPSILON := 0
 
 
 ifndef DEBUG
@@ -44,7 +45,7 @@ $(OBJS): %.o: %.cpp
 # phony targets
 #
 run: tree
-	./tree $(DTRAIN) 0 | clang-format > $(tree_pred_func)
+	./tree $(DTRAIN) $(EPSILON) | clang-format > $(tree_pred_func)
 	$(CXX) $(CXXFLAGS) -o predictor tree_predictor.cpp $(tree_pred_func)
 	./predictor $(DTEST)
 

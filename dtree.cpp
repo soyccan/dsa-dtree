@@ -194,7 +194,7 @@ inline bool DecisionTree::__det_threshold(const int indices[],
                         min_conf = lconf + rconf;
                         opt.clear();
                     }
-                    opt.push_back({.thr = val,
+                    opt.push_back({.thr = (val + tmp[i + 1].first) / 2,
                                    .prop = prop,
                                    .lconf = lconf,
                                    .rconf = rconf,
