@@ -5,6 +5,8 @@
 tree
 predictor
 a.out
+test/rand
+test/*.in
 
 tree_pred_func.cpp
 

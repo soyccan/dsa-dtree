@@ -2,12 +2,16 @@ CXX := clang++
 CXXFLAGS := -Wall -Wextra -std=gnu++17 -I/usr/local/include
 LDFLAGS :=
 
-EXES := tree predictor
-OBJS := main.o dtree.o tree_predictor.o tree_pred_func.o
-tmpfiles := tree_pred_func.cpp
+EXES := tree predictor test/rand
+OBJS := main.o dtree.o
 deps := $(OBJS:%.o=.%.o.d)
 compdb-dep := $(OBJS:%.o=.%.o.json) # compilation database
 compdb := compile_commands.json
+
+tree_pred_func := tree_pred_func.cpp
+
+DTRAIN := data/wine.train
+DTEST := data/wine.test
 
 
 ifndef DEBUG
@@ -20,26 +24,35 @@ else
 endif
 
 
-.PHONY: all clean run upload tree_pred_func.cpp
+.PHONY: all clean run rand-run upload scan-build
 all: run $(compdb)
+
 
 $(compdb): $(compdb-dep)
 	sed -e '1s/^/[/' -e '$$s/,$$/]/' $^ > $@
 
-run: predictor
-	./predictor data/wine.test
-
-predictor: tree_predictor.o tree_pred_func.o
-	$(CXX) $(LDFLAGS) -o $@ $^
-
 tree: main.o dtree.o
 	$(CXX) $(LDFLAGS) -o $@ $^
 
-tree_pred_func.cpp: tree
-	./tree data/wine.train 0 | clang-format > $@
+test/rand: test/rand.c
+	clang -O2 -o $@ $^
 
 $(OBJS): %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ -MMD -MF .$@.d -MJ .$@.json $<
+
+
+# phony targets
+#
+run: tree
+	./tree $(DTRAIN) 0 | clang-format > $(tree_pred_func)
+	$(CXX) $(CXXFLAGS) -o predictor tree_predictor.cpp $(tree_pred_func)
+	./predictor $(DTEST)
+
+rand-run: tree test/rand
+	test/rand > test/1.in
+	./tree test/1.in 0 | clang-format > $(tree_pred_func)
+	$(CXX) $(CXXFLAGS) -o predictor tree_predictor.cpp $(tree_pred_func)
+	./predictor test/1.in
 
 scan-build:
 	PATH=/usr/local/opt/llvm/bin:$(PATH) scan-build make

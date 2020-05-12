@@ -6,6 +6,7 @@
 #include <ctime>
 #include <fstream>
 #include <functional>
+#include <iomanip>
 #include <limits>
 #include <memory>
 #include <numeric>
@@ -154,29 +155,26 @@ inline bool DecisionTree::__det_threshold(const int indices[],
     std::vector<__opt_t> opt;
 
     // (val, res)
-    auto tmp = std::make_unique<std::tuple<double, int>[]>(__num_sample);
-    int tmpn = 0;
+    auto tmp = std::make_unique<std::pair<double, int>[]>(__num_sample);
 
     FOR (int, prop, 1, __dimension + 1) {
         int ly = 0, ln = 0, ry = 0, rn = 0;  // left/right yes/no
 
-        tmpn = 0;
         FOR (int, i, 0, num_indices) {
             int idx = indices[i];
             double key = __data_t[__num_sample * (prop - 1) + idx - 1];
             int res = __res[idx - 1];
-            if (key != std::get<0>(tmp[tmpn - 1])) {
-                // ignore duplicate key
-                tmp[tmpn++] = std::make_tuple(key, res);
-            }
+
+            tmp[i] = std::make_pair(key, res);
+
             if (res >= 0)
                 ry++;
             else
                 rn++;
         }
-        std::sort(&tmp[0], &tmp[tmpn]);
+        std::sort(&tmp[0], &tmp[num_indices]);
 
-        FOR (int, i, 0, tmpn - 1) {
+        FOR (int, i, 0, num_indices - 1) {
             double val;
             int res;
             std::tie(val, res) = tmp[i];
@@ -186,29 +184,37 @@ inline bool DecisionTree::__det_threshold(const int indices[],
             else
                 ln++, rn--;
 
-            int lconf = std::min(ly, ln);
-            int rconf = std::min(ry, rn);
-            if (lconf + rconf <= min_conf) {
-                if (lconf + rconf < min_conf) {
-                    min_conf = lconf + rconf;
-                    opt.clear();
+            if (val != tmp[i + 1].first) {
+                // handle duplicate keys
+
+                int lconf = std::min(ly, ln);
+                int rconf = std::min(ry, rn);
+                if (lconf + rconf <= min_conf) {
+                    if (lconf + rconf < min_conf) {
+                        min_conf = lconf + rconf;
+                        opt.clear();
+                    }
+                    opt.push_back({.thr = val,
+                                   .prop = prop,
+                                   .lconf = lconf,
+                                   .rconf = rconf,
+                                   .ltend = (ly >= ln ? 1 : -1),
+                                   .rtend = (ry >= rn ? 1 : -1)});
                 }
-                opt.push_back({.thr = val,
-                               .prop = prop,
-                               .lconf = lconf,
-                               .rconf = rconf,
-                               .ltend = (ly >= ln ? 1 : -1),
-                               .rtend = (ry >= rn ? 1 : -1)});
+                LOG("  prop=%s i=%s lconf=%s rconf=%s ly=%s ln=%s ry=%s rn=%s "
+                    "val=%s res=%s",
+                    % prop % i % lconf % rconf % ly % ln % ry % rn % val % res);
             }
-            LOG("  prop=%s i=%s lconf=%s rconf=%s ly=%s ln=%s ry=%s rn=%s "
-                "val=%s res=%s",
-                % prop % i % lconf % rconf % ly % ln % ry % rn % val % res);
         }
     }
     if (opt.empty())
         // fail to find threshold
         return false;
+#ifndef NDEBUG
     const __opt_t& g = opt[std::rand() % opt.size()];
+#else
+    const __opt_t& g = opt[0];
+#endif
     threshold = g.thr;
     property = g.prop;
     l_confusion = g.lconf;
@@ -299,6 +305,7 @@ void DecisionTree::__travel_branch(Node* node,
 
 void DecisionTree::gen_code(std::basic_ostream<char>& dest) const
 {
+    dest << std::fixed << std::setprecision(6);
     dest << "int tree_predict(double* attr) {";
     __travel_branch(__root, dest);
     dest << "}";
