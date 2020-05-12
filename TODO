@@ -1,0 +1,8 @@
+testcase:
+- all sample have same value of every property
+
+logic:
+- is the recursion depth limit necessary?
+
+optimization:
+- does too many parameters on __build() make poor performance?

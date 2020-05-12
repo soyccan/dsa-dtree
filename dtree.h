@@ -5,12 +5,17 @@
 #include <memory>
 
 struct Node {
-    Node *lch, *rch;   // lch: values that <= threshold; rch: otherwise
+    // lch: values that <= threshold; rch: otherwise
+    Node *lch, *rch;
+
+    // following are valid only for non-leaves
     double threshold;  // value of the property <= threshold will go on to left
                        // child, otherwise right
     int property;      // which property is used in comparison with threshold
                        // (1-indexed)
-    int prediction;    // meaningful only on leaves (lch == rch == NULL)
+
+    // following are value only for leaves (lch == rch == NULL)
+    int prediction;  // predicted result
 
     Node();
     ~Node();
@@ -33,7 +38,7 @@ public:
     void gen_code(const std::string& filename) const;
 
 private:
-    inline void __det_threshold(const int indices[],
+    inline bool __det_threshold(const int indices[],
                                 int num_indices,
                                 double& threshold,
                                 int& property,
@@ -42,7 +47,12 @@ private:
                                 int& l_tendency,
                                 int& r_tendency);
 
-    void __build(Node*& node, int indices[], int num_indices);
+    void __build(Node*& node,
+                 int indices[],
+                 int num_indices,
+                 int depth,
+                 int conf,
+                 int tend);
 
     void __travel_branch(Node* node, std::basic_ostream<char>& content) const;
 

@@ -36,7 +36,7 @@ tree: main.o dtree.o
 	$(CXX) $(LDFLAGS) -o $@ $^
 
 tree_pred_func.cpp: tree
-	./tree data/wine.train 0 > $@
+	./tree data/wine.train 0 | clang-format > $@
 
 $(OBJS): %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ -MMD -MF .$@.d -MJ .$@.json $<
