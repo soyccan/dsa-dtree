@@ -3,15 +3,15 @@ CXXFLAGS := -Wall -Wextra -std=gnu++17 -I/usr/local/include
 LDFLAGS :=
 
 EXES := tree predictor test/rand
-OBJS := main.o dtree.o
+OBJS := main.o dtree.o randmain.o randdtree.o
 deps := $(OBJS:%.o=.%.o.d)
 compdb-dep := $(OBJS:%.o=.%.o.json) # compilation database
 compdb := compile_commands.json
 
 tree_pred_func := tree_pred_func.cpp
 
-DTRAIN := data/cwb_train
-DTEST := data/cwb_train
+DTRAIN := data/wine.train
+DTEST := data/wine.test
 EPSILON := 0
 
 
@@ -26,11 +26,14 @@ endif
 
 
 .PHONY: all clean run rand-run upload scan-build
-all: run $(compdb)
+all: tree randtree $(compdb)
 
 
 $(compdb): $(compdb-dep)
 	sed -e '1s/^/[/' -e '$$s/,$$/]/' $^ > $@
+
+randtree: randmain.o randdtree.o dtree.o
+	$(CXX) $(LDFLAGS) -o $@ $^
 
 tree: main.o dtree.o
 	$(CXX) $(LDFLAGS) -o $@ $^
@@ -49,11 +52,16 @@ run: tree
 	$(CXX) $(CXXFLAGS) -o predictor tree_predictor.cpp $(tree_pred_func)
 	./predictor $(DTEST)
 
-rand-run: tree test/rand
+randtest: tree test/rand
 	test/rand > test/1.in
 	./tree test/1.in 0 | clang-format > $(tree_pred_func)
 	$(CXX) $(CXXFLAGS) -o predictor tree_predictor.cpp $(tree_pred_func)
 	./predictor test/1.in
+
+randtree-run: randtree
+	./randtree $(DTRAIN) $(EPSILON) | clang-format > $(tree_pred_func)
+	$(CXX) $(CXXFLAGS) -o predictor tree_predictor.cpp $(tree_pred_func)
+	./predictor $(DTEST)
 
 scan-build:
 	PATH=/usr/local/opt/llvm/bin:$(PATH) scan-build make
@@ -62,6 +70,6 @@ upload:
 	scp -P 9453 -r *.hpp *.h *.cpp Makefile soyccan@bravo.nctu.me:/home/soyccan/Documents/dsa-hw4/
 
 clean:
-	rm -rf $(EXES) $(OBJS) $(deps) $(compdb) $(compdb-dep) $(tmpfiles)
+	rm -rf $(EXES) $(OBJS) $(deps) $(compdb) $(compdb-dep) $(tree_pred_func)
 
 -include $(deps)

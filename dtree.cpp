@@ -201,7 +201,7 @@ inline bool DecisionTree::__det_threshold(const int indices[],
                                    .ltend = (ly >= ln ? 1 : -1),
                                    .rtend = (ry >= rn ? 1 : -1)});
                 }
-                LOG("  prop=%s i=%s lconf=%s rconf=%s ly=%s ln=%s ry=%s rn=%s "
+                LOG(" > prop=%s i=%s lconf=%s rconf=%s ly=%s ln=%s ry=%s rn=%s "
                     "val=%s res=%s",
                     % prop % i % lconf % rconf % ly % ln % ry % rn % val % res);
             }
@@ -210,18 +210,14 @@ inline bool DecisionTree::__det_threshold(const int indices[],
     if (opt.empty())
         // fail to find threshold
         return false;
-#ifndef NDEBUG
     const __opt_t& g = opt[std::rand() % opt.size()];
-#else
-    const __opt_t& g = opt[0];
-#endif
     threshold = g.thr;
     property = g.prop;
     l_confusion = g.lconf;
     r_confusion = g.rconf;
     l_tendency = g.ltend;
     r_tendency = g.rtend;
-    LOG("threshold=%s prop=%s lconf=%s rconf=%s ltend=%s rtend=%s",
+    LOG("  threshold=%s prop=%s lconf=%s rconf=%s ltend=%s rtend=%s",
         % threshold % property % l_confusion % r_confusion % l_tendency %
             r_tendency);
     return true;
@@ -244,6 +240,8 @@ void DecisionTree::__build(Node*& node,
         return;
     }
 
+    LOG("\nDepth=%d", % depth);
+
     int lconf, rconf, ltend, rtend;
     if (!__det_threshold(indices, num_indices, node->threshold, node->property,
                          lconf, rconf, ltend, rtend)) {
@@ -258,12 +256,12 @@ void DecisionTree::__build(Node*& node,
     });
     assert(rpart != indices + num_indices);
 
-    LOGN("val: ");
+    LOGN("  val: ");
     FOR (int, i, 0, num_indices) {
         if (indices + i == rpart)
             LOG("/");
         LOGN(
-            "%s%s ",
+            "  %s%s",
             % (__res[indices[i] - 1] >= 0 ? '+' : '-') %
                 __data_t[__num_sample * (node->property - 1) + indices[i] - 1]);
     }

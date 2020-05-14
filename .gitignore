@@ -3,6 +3,7 @@
 *.o
 
 tree
+randtree
 predictor
 a.out
 test/rand

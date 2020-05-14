@@ -37,15 +37,15 @@ public:
     void gen_code(std::basic_ostream<char>& dest) const;
     void gen_code(const std::string& filename) const;
 
-private:
-    inline bool __det_threshold(const int indices[],
-                                int num_indices,
-                                double& threshold,
-                                int& property,
-                                int& l_confusion,
-                                int& r_confusion,
-                                int& l_tendency,
-                                int& r_tendency);
+protected:
+    virtual inline bool __det_threshold(const int indices[],
+                                        int num_indices,
+                                        double& threshold,
+                                        int& property,
+                                        int& l_confusion,
+                                        int& r_confusion,
+                                        int& l_tendency,
+                                        int& r_tendency);
 
     void __build(Node*& node,
                  int indices[],
