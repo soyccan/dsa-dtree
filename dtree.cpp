@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
 #include <ctime>
 #include <fstream>
 #include <functional>
@@ -51,28 +52,38 @@ void DecisionTree::parseLIBSVM(std::basic_istream<char>& src)
 {
     /* in LIBSVM format */
 
-    std::string line, word;
-    std::istringstream liness;
+    char buf[0x100];
+    char* line;
+    char* word;
     std::vector<std::vector<std::pair<int, double>>> tmp;
     int dimension = 0, num_sample = 0;
 
-    for (num_sample = 0; std::getline(src, line); num_sample++) {
-#ifndef NDEBUG
-        // throw internal error to foreground
-        liness.exceptions(std::ios::failbit);
-#endif
-        liness.str(line);
+    for (num_sample = 0; src.good() && src.getline(buf, sizeof buf);
+         num_sample++) {
+        if (*buf == '\0' || *buf == '\n')
+            break;
+
+        line = buf;
+        LOG("num_sample: %s line:%s", % num_sample % line);
+        word = strsep(&line, " \n");
+        LOG("word:%s", % word);
+
         tmp.emplace_back();
-        liness >> word;
-        tmp.back().emplace_back(std::stoi(word), 0);
-        while (liness >> word) {
-            auto pos = word.find(':');
-            int j = std::stoi(word.substr(0, pos));
-            double val = std::stod(word.substr(pos + 1));
+        tmp.back().emplace_back(std::atoi(word), 0);
+
+        while ((word = strsep(&line, " \n"))) {
+            if (*word == '\0')
+                break;
+            LOG("word:%s", % word);
+
+            char* p = strsep(&word, ":");
+            assert(word != NULL);
+
+            int j = std::atoi(p);
+            double val = std::atof(word);
             dimension = std::max(dimension, j);
             tmp.back().emplace_back(j, val);
         }
-        liness.clear();
     }
     reset(num_sample, dimension);
     FOR (size_t, i, 0, tmp.size()) {

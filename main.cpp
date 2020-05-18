@@ -21,8 +21,10 @@ int main(int argc, char** argv)
         std::exit(2);
     }
 
-    std::ifstream infile(argv[1]);
-    infile.exceptions(std::ios::failbit);  // throw error if failed opening file
+    std::ifstream infile;
+    infile.open(argv[1]);
+    if (!infile.good())
+        throw std::runtime_error("File cannot be read");
 
     char* epsilon_end = NULL;
     double epsilon = std::strtod(argv[2], &epsilon_end);
