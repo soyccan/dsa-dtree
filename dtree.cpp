@@ -1,5 +1,6 @@
 #include "dtree.h"
 
+#include <sys/time.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -18,6 +19,9 @@
 #include <vector>
 
 #include "tools.h"
+
+
+static int maxdepth;
 
 
 Node::Node()
@@ -117,7 +121,10 @@ void DecisionTree::reset(int num_sample, int dimension)
         delete __root;
     __root = NULL;
 
-    std::srand(std::time(NULL));
+
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    std::srand(tv.tv_usec ^ tv.tv_sec);
 
     // TODO: 0-init necessary?
     // fill(__data, __data + num_sample * dimension, 0);
@@ -248,6 +255,7 @@ void DecisionTree::__build(Node*& node,
 
     if ((double) conf / num_indices <= __epsilon) {
         node->prediction = tend;
+        maxdepth = std::max(depth, maxdepth);
         return;
     }
 
@@ -287,8 +295,10 @@ void DecisionTree::build()
 {
     int* indices = new int[__num_sample];
     std::iota(&indices[0], &indices[__num_sample], 1);
+    maxdepth = 0;
     __build(__root, indices, __num_sample, 0, std::numeric_limits<int>::max(),
             0);
+    // std::cerr << "MaxDepth=" << maxdepth << "\n";
     delete[] indices;
 }
 

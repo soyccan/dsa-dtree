@@ -4,6 +4,7 @@
 
 tree
 randtree
+maxtree
 predictor
 a.out
 test/rand

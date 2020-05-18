@@ -3,7 +3,7 @@ CXXFLAGS := -Wall -Wextra -std=gnu++17 -I/usr/local/include
 LDFLAGS :=
 
 EXES := tree predictor test/rand
-OBJS := main.o dtree.o randmain.o randdtree.o
+OBJS := main.o dtree.o randmain.o randdtree.o maxmain.o maxdtree.o
 deps := $(OBJS:%.o=.%.o.d)
 compdb-dep := $(OBJS:%.o=.%.o.json) # compilation database
 compdb := compile_commands.json
@@ -26,11 +26,14 @@ endif
 
 
 .PHONY: all clean run rand-run upload scan-build
-all: tree randtree $(compdb)
+all: tree randtree maxtree $(compdb)
 
 
 $(compdb): $(compdb-dep)
 	sed -e '1s/^/[/' -e '$$s/,$$/]/' $^ > $@
+
+maxtree: maxmain.o maxdtree.o dtree.o
+	$(CXX) $(LDFLAGS) -o $@ $^
 
 randtree: randmain.o randdtree.o dtree.o
 	$(CXX) $(LDFLAGS) -o $@ $^
